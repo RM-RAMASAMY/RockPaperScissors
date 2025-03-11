@@ -32,12 +32,37 @@ public:
     }
 };
 
-class ComputerPlayer : public Player {
+class freq_filehander{
+    public:
+    map<string, int> frequency;
+    void saveFrequencies() {
+        ofstream file("frequencies.txt");
+        for (const auto &entry : frequency) {
+            file << entry.first << " " << entry.second << endl;
+        }
+        file.close();
+        cout << "Writing frequency file frequency.txt: " << frequency.size() << " records." << endl;
+    }
+    void loadFrequencies() {
+        ifstream file("frequencies.txt");
+        if (!file.is_open()) return;
+        frequency.clear();
+        string pattern;
+        int count;
+        while (file >> pattern >> count) {
+            frequency[pattern] = count;
+        }
+        file.close();
+        cout << "Reading file frequencies.txt: " << frequency.size() << " records." << endl;
+    }
+};
+
+class ComputerPlayer : public Player, public freq_filehander {
 protected:
     vector<pair<char, char>> history;
-    map<string, int> frequency;
     int memorySize;
     int mode;
+    
 public:
     ComputerPlayer(int memSize = 5, int Mode=1) : memorySize(memSize), mode(Mode) {
         srand(time(0));
@@ -59,37 +84,24 @@ public:
             history.erase(history.begin());
         }
     }
-    void saveFrequencies() {
-        ofstream file("frequencies.txt");
-        for (const auto &entry : frequency) {
-            file << entry.first << " " << entry.second << endl;
-        }
-        file.close();
-        cout << "Writing frequency file freq.txt: " << frequency.size() << " records." << endl;
+    char randomChoice() {
+        char choices[] = {'R', 'P', 'S'};
+        return choices[rand() % 3];
     }
-    void loadFrequencies() {
-        ifstream file("frequencies.txt");
-        if (!file.is_open()) return;
-        frequency.clear();
-        string pattern;
-        int count;
-        while (file >> pattern >> count) {
-            frequency[pattern] = count;
-        }
-        file.close();
-        cout << "Reading file frequencies.txt: " << frequency.size() << " records." << endl;
+    char counterMove(char move) {
+        if (move == 'R') return 'P';
+        if (move == 'P') return 'S';
+        return 'R';
     }
 };
 
 class SmartComputer : public ComputerPlayer {
 public:
-    SmartComputer(int memSize = 5, int Mode=1) : ComputerPlayer(memSize,Mode) {}
+    SmartComputer(int MemSize = 5) {
+        ComputerPlayer::memorySize = MemSize;
+        ComputerPlayer::mode = 1;
+    }
     char makeChoice() override {
-        if (mode==2)
-        {
-            cout << "    Computer will choose randomly." << endl;
-            return randomChoice();
-        }
         if (history.size() < (memorySize/2)) {
             cout << "    Insufficient history to predict.\n    Computer will choose randomly." << endl;
             return randomChoice();
@@ -122,25 +134,29 @@ public:
         cout << "    Predicted human choice: " << (predictedMove == 'R' ? "ROCK" : predictedMove == 'P' ? "PAPER" : "SCISSORS") << endl;
         return counterMove(predictedMove);
     }
-private:
-    char randomChoice() {
-        char choices[] = {'R', 'P', 'S'};
-        return choices[rand() % 3];
-    }
-    char counterMove(char move) {
-        if (move == 'R') return 'P';
-        if (move == 'P') return 'S';
-        return 'R';
+};
+
+class RandomComputer : public ComputerPlayer {
+public:
+    RandomComputer(int MemSize = 5) {
+        ComputerPlayer::memorySize = MemSize;
+        ComputerPlayer::mode = 2;
+}
+    char makeChoice() override {
+        cout << "    Computer will choose randomly." << endl;
+        return randomChoice();
     }
 };
 
 class GameEngine {
 private:
     HumanPlayer human;
-    SmartComputer *computer;
+    ComputerPlayer *computer;
     int humanScore = 0, computerScore = 0, ties = 0;
 public:
-    GameEngine(SmartComputer *const comp) : computer(comp) {}
+    GameEngine(ComputerPlayer *const comp){
+        computer = comp;
+    }
     void playGame(int rounds = 5) {
         for (int i = 0; i < rounds; ++i) {
             cout << "\nRound " << i + 1 << endl;
@@ -185,27 +201,35 @@ int main() {
     cout<<"--------------------------------------\n";
     cout<<"There are 20 rounds in the game\n";
     cout<<"--------------------------------------\n";
-    cout<<"Choose which Strategy that the computer should employ in the game: \n";
-    cout<<"1. Smart Computer\n";
-    cout<<"2. Random Computer\n";
-    cout<<"Enter your choice (1 or 2): ";
     int choice;
-    cin>>choice;
-    switch (choice)
-    {
-        case 1:
-        cout<<"Smart Computer Strategy is chosen\n";
-        break;
-        case 2:
-        cout<<"Random Computer Strategy is chosen\n";
-        break;
-        default:
-        cout<<"Invalid choice\n";
-        break;
-    }
+    do{
+        cout<<"Choose which Strategy that the computer should employ in the game: \n";
+        cout<<"1. Smart Computer\n";
+        cout<<"2. Random Computer\n";
+        cout<<"Enter your choice (1 or 2): ";
+        cin>>choice;
+        switch (choice)
+        {
+            case 1:
+            cout<<"Smart Computer Strategy is chosen\n";
+            break;
+            case 2:
+            cout<<"Random Computer Strategy is chosen\n";
+            break;
+            default:
+            cout<<"Invalid choice\n";
+            break;
+        }
+    }while (choice!=1 && choice!=2);
+ 
     int patlen = 5;
-    SmartComputer computer(patlen,choice);
-    GameEngine game(&computer);
+    ComputerPlayer* computer;
+    if (choice == 1) {
+        computer = new SmartComputer(patlen);
+    } else {
+        computer = new RandomComputer(patlen);
+    }
+    GameEngine game(computer);
     game.playGame();
     return 0;
 }
