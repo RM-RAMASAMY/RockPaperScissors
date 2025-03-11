@@ -18,37 +18,45 @@ class HumanPlayer : public Player {
 public:
     char makeChoice() override {
         char choice;
-        cout << "  HUMAN's choice? ";
-        cin >> choice;
-        choice = toupper(choice);
-        cout << "  HUMAN chose " << (choice == 'R' ? "ROCK" : choice == 'P' ? "PAPER" : "SCISSORS") << endl;
-        return choice;
+        while (true) {
+            cout << "  HUMAN's choice? ";
+            cin >> choice;
+            choice = toupper(choice);
+            if (choice == 'R' || choice == 'P' || choice == 'S') {
+                cout << "  HUMAN chose " << (choice == 'R' ? "ROCK" : choice == 'P' ? "PAPER" : "SCISSORS") << endl;
+                return choice;
+            } else {
+                cout << "Invalid choice. Please enter R, P, or S: " << endl;
+            }
+        }
     }
 };
 
 class ComputerPlayer : public Player {
 protected:
-    vector<char> history;
+    vector<pair<char, char>> history;
     map<string, int> frequency;
     int memorySize;
+    int mode;
 public:
-    ComputerPlayer(int memSize = 5) : memorySize(memSize) {
+    ComputerPlayer(int memSize = 5, int Mode=1) : memorySize(memSize), mode(Mode) {
         srand(time(0));
         loadFrequencies();
     }
     virtual char makeChoice() override = 0;
     void updateHistory(char humanChoice, char computerChoice) {
-        history.push_back(humanChoice);
-        history.push_back(computerChoice);
-        if (history.size() > 2 * memorySize) {
-            history.erase(history.begin());
-            history.erase(history.begin());
-        }
+        history.emplace_back(humanChoice, computerChoice);
         
-        if (history.size() == 2 * memorySize) {
-            string pattern(history.begin(), history.end());
+        if (history.size() == ((memorySize/2)+1)) {
+            string pattern;
+            for (const auto& [h, c] : history) {
+                pattern += h;
+                pattern += c;
+            }
+            pattern.erase(pattern.end() - 1);
             frequency[pattern]++;
             cout << "    Updated " << pattern << " to " << frequency[pattern] << endl;
+            history.erase(history.begin());
         }
     }
     void saveFrequencies() {
@@ -69,34 +77,48 @@ public:
             frequency[pattern] = count;
         }
         file.close();
-        cout << "Reading file freq.txt: " << frequency.size() << " records." << endl;
+        cout << "Reading file frequencies.txt: " << frequency.size() << " records." << endl;
     }
 };
 
 class SmartComputer : public ComputerPlayer {
 public:
-    SmartComputer(int memSize = 5) : ComputerPlayer(memSize) {}
+    SmartComputer(int memSize = 5, int Mode=1) : ComputerPlayer(memSize,Mode) {}
     char makeChoice() override {
-        if (history.size() < 2 * memorySize) {
+        if (mode==2)
+        {
+            cout << "    Computer will choose randomly." << endl;
+            return randomChoice();
+        }
+        if (history.size() < (memorySize/2)) {
             cout << "    Insufficient history to predict.\n    Computer will choose randomly." << endl;
             return randomChoice();
         }
         
         string bestPattern;
         int maxFreq = 0;
+        string currentPattern;
+        for (const auto& [h, c] : history) {
+            currentPattern += h;
+            currentPattern += c;
+        }
+        cout<< "Matching Patterns: \n";
         for (const auto &[pattern, count] : frequency) {
-            if (pattern.substr(0, 2 * (memorySize - 1)) == string(history.begin(), history.end() - 2) && count > maxFreq) {
+
+            if (pattern.substr(0, currentPattern.size()) == currentPattern && count > maxFreq) {
+                cout << pattern << " " << count << endl;
                 maxFreq = count;
                 bestPattern = pattern;
             }
         }
+        cout << "Best Pattern: " << bestPattern << endl;
         
         if (bestPattern.empty()) {
             cout << "    No matching pattern found.\n    Computer will choose randomly." << endl;
             return randomChoice();
         }
         
-        char predictedMove = bestPattern[bestPattern.size() - 2];
+        char predictedMove = bestPattern[bestPattern.size() - 1];
         cout << "    Predicted human choice: " << (predictedMove == 'R' ? "ROCK" : predictedMove == 'P' ? "PAPER" : "SCISSORS") << endl;
         return counterMove(predictedMove);
     }
@@ -118,8 +140,8 @@ private:
     SmartComputer *computer;
     int humanScore = 0, computerScore = 0, ties = 0;
 public:
-    GameEngine(SmartComputer *comp) : computer(comp) {}
-    void playGame(int rounds = 20) {
+    GameEngine(SmartComputer *const comp) : computer(comp) {}
+    void playGame(int rounds = 5) {
         for (int i = 0; i < rounds; ++i) {
             cout << "\nRound " << i + 1 << endl;
             char humanChoice = human.makeChoice();
@@ -153,7 +175,36 @@ public:
 };
 
 int main() {
-    SmartComputer computer;
+    cout<<"\n\nWelcome to Rock, Paper, Scissors Game\n";
+    cout<<"--------------------------------------\n";
+    cout<<"\nRules of the game:\n";
+    cout<<"------------------\n";
+    cout<<"Rock beats Scissors\n";
+    cout<<"Scissors beats Paper\n";
+    cout<<"Paper beats Rock\n";
+    cout<<"--------------------------------------\n";
+    cout<<"There are 20 rounds in the game\n";
+    cout<<"--------------------------------------\n";
+    cout<<"Choose which Strategy that the computer should employ in the game: \n";
+    cout<<"1. Smart Computer\n";
+    cout<<"2. Random Computer\n";
+    cout<<"Enter your choice (1 or 2): ";
+    int choice;
+    cin>>choice;
+    switch (choice)
+    {
+        case 1:
+        cout<<"Smart Computer Strategy is chosen\n";
+        break;
+        case 2:
+        cout<<"Random Computer Strategy is chosen\n";
+        break;
+        default:
+        cout<<"Invalid choice\n";
+        break;
+    }
+    int patlen = 5;
+    SmartComputer computer(patlen,choice);
     GameEngine game(&computer);
     game.playGame();
     return 0;
