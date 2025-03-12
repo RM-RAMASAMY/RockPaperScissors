@@ -55,11 +55,16 @@ class freq_filehander{
         file.close();
         cout << "Reading file frequencies.txt: " << frequency.size() << " records." << endl;
     }
+    void updateFrequency(vector<char> pattern) {
+        string patternStr(pattern.begin(), pattern.end());
+        frequency[patternStr]++;
+        cout << "    Updated " << patternStr << " to " << frequency[patternStr] << endl;
+    }
 };
 
 class ComputerPlayer : public Player, public freq_filehander {
 protected:
-    vector<pair<char, char>> history;
+    vector<char> history;
     int memorySize;
     int mode;
     
@@ -69,19 +74,14 @@ public:
         loadFrequencies();
     }
     virtual char makeChoice() override = 0;
-    void updateHistory(char humanChoice, char computerChoice) {
-        history.emplace_back(humanChoice, computerChoice);
-        
-        if (history.size() == ((memorySize/2)+1)) {
-            string pattern;
-            for (const auto& [h, c] : history) {
-                pattern += h;
-                pattern += c;
-            }
-            pattern.erase(pattern.end() - 1);
-            frequency[pattern]++;
-            cout << "    Updated " << pattern << " to " << frequency[pattern] << endl;
+    void updateHistory(char choice) {
+        history.emplace_back(choice);
+        if(history.size() > memorySize) {
             history.erase(history.begin());
+        }
+        cout << "  History: "<<string(history.begin(), history.end()) << endl;
+        if (history.size() == memorySize) {
+            updateFrequency(history);
         }
     }
     char randomChoice() {
@@ -93,6 +93,10 @@ public:
         if (move == 'P') return 'S';
         return 'R';
     }
+    void printHist()
+    {
+        cout << "  History: "<<string(history.begin(), history.end()) << endl;
+    }
 };
 
 class SmartComputer : public ComputerPlayer {
@@ -102,33 +106,36 @@ public:
         ComputerPlayer::mode = 1;
     }
     char makeChoice() override {
-        if (history.size() < (memorySize/2)) {
+        if (history.size() < memorySize) {
             cout << "    Insufficient history to predict.\n    Computer will choose randomly." << endl;
             return randomChoice();
         }
         
         string bestPattern;
         int maxFreq = 0;
-        string currentPattern;
-        for (const auto& [h, c] : history) {
-            currentPattern += h;
-            currentPattern += c;
-        }
-        cout<< "Matching Patterns: \n";
-        for (const auto &[pattern, count] : frequency) {
-
-            if (pattern.substr(0, currentPattern.size()) == currentPattern && count > maxFreq) {
-                cout << pattern << " " << count << endl;
-                maxFreq = count;
-                bestPattern = pattern;
+        vector<char> options = {'R', 'P', 'S'};
+        string currentPattern(history.begin(), history.end());
+        currentPattern.erase(currentPattern.begin());
+        cout<< "Checked: \n";
+        for(char option : options){
+            string potentialPattern = currentPattern+option;
+            if(frequency.find(potentialPattern) == frequency.end()){
+                cout<<potentialPattern<<": 0"<<endl;
+            }
+            else{
+                cout<<potentialPattern<<": "<<frequency[potentialPattern]<<endl;
+                if(frequency[potentialPattern]>maxFreq){
+                    maxFreq = frequency[potentialPattern];
+                    bestPattern = potentialPattern;
+                }
             }
         }
-        cout << "Best Pattern: " << bestPattern << endl;
-        
+
         if (bestPattern.empty()) {
             cout << "    No matching pattern found.\n    Computer will choose randomly." << endl;
             return randomChoice();
         }
+        cout << "Best Pattern: " << bestPattern << endl;
         
         char predictedMove = bestPattern[bestPattern.size() - 1];
         cout << "    Predicted human choice: " << (predictedMove == 'R' ? "ROCK" : predictedMove == 'P' ? "PAPER" : "SCISSORS") << endl;
@@ -160,9 +167,9 @@ public:
     void playGame(int rounds = 5) {
         for (int i = 0; i < rounds; ++i) {
             cout << "\nRound " << i + 1 << endl;
+            computer->printHist();
             char humanChoice = human.makeChoice();
             char computerChoice = computer->makeChoice();
-            computer->updateHistory(humanChoice, computerChoice);
             cout << "  COMPUTER chose " << (computerChoice == 'R' ? "ROCK" : computerChoice == 'P' ? "PAPER" : "SCISSORS") << endl;
             
             if ((humanChoice == 'R' && computerChoice == 'S') ||
@@ -177,6 +184,9 @@ public:
                 cout << "  The winner is: COMPUTER\n";
                 computerScore++;
             }
+            
+            computer->updateHistory(humanChoice);
+            computer->updateHistory(computerChoice);
         }
         displayResults();
         computer->saveFrequencies();

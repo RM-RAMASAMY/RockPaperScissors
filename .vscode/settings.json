@@ -5,6 +5,13 @@
         "xtree": "cpp",
         "iostream": "cpp",
         "map": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "format": "cpp",
+        "initializer_list": "cpp",
+        "list": "cpp",
+        "xhash": "cpp",
+        "xutility": "cpp",
+        "utility": "cpp",
+        "xlocmon": "cpp"
     }
 }
