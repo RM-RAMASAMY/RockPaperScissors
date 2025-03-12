@@ -95,7 +95,11 @@ public:
     }
     void printHist()
     {
-        cout << "  History: "<<string(history.begin(), history.end()) << endl;
+        if(mode == 1)
+        {
+            cout << "  History: "<<string(history.begin(), history.end()) << endl;
+        }
+        
     }
 };
 
