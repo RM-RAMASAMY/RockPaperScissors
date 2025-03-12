@@ -79,7 +79,7 @@ public:
         if(history.size() > memorySize) {
             history.erase(history.begin());
         }
-        cout << "  History: "<<string(history.begin(), history.end()) << endl;
+        printHist();
         if (history.size() == memorySize) {
             updateFrequency(history);
         }
@@ -95,10 +95,7 @@ public:
     }
     void printHist()
     {
-        if(mode == 1)
-        {
-            cout << "  History: "<<string(history.begin(), history.end()) << endl;
-        }
+        cout << "  History: "<<string(history.begin(), history.end()) << endl;
         
     }
 };
