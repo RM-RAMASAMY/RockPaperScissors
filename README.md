@@ -1,1 +1,1 @@
-# RockPaperScissors
+# RockPaperScissors with learning bot
